@@ -1,0 +1,47 @@
+name: elasticsearch-cprov
+version: 5.4.0
+summary: Open Source, Distributed, RESTful Search Engine
+description: |
+  Elasticsearch is a distributed RESTful search engine built for the cloud.
+confinement: devmode
+grade: devel
+
+apps:
+    elasticsearch:
+      # Enabling bootstrap.seccomp would fail in making the 999 syscall,
+      # which won't be whitelisted by seccomp.
+      #-Ees.insecure.allow.root=true
+      #-Ebootstrap.seccomp=false
+      # Doesn't matter because none of those options are available in series
+      # 5.x.x. Thus this is running on the snap owner $HOME in devmode.
+      command: |
+        env JAVA_HOME=$SNAP/usr/lib/jvm/default-java $SNAP/bin/elasticsearch
+        -Epath.conf=$SNAP_USER_COMMON/config
+        -Epath.logs=$SNAP_USER_DATA/logs
+        -Epath.data=$SNAP_USER_COMMON/data
+      #-d
+      #daemon: forking
+      plugs:
+        - network
+        - network-bind
+        # system-observe for ps
+        - system-observe
+        # mount-observe for /proc/mounts
+        - mount-observe
+        # hardware-observe for /sys/block
+        - hardware-observe
+parts:
+  elasticsearch:
+    plugin: dump
+    source: https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.4.0.tar.gz
+  java:
+    plugin: nil
+    stage-packages:
+      # Cannot use the Oracle JRE yet as there's no way to accept the license
+      # wrapping the download URL.
+      - default-jre
+    prime:
+      - usr/lib/jvm
+      # Need etc/java-8-openjdk/security/java.security for
+      # java.lang.reflect.ReflectPermission.
+      - etc/java-*
